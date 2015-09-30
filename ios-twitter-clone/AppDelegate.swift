@@ -12,11 +12,24 @@ import UIKit
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
-
+    var storyboard = UIStoryboard(name: "Main", bundle: nil)
 
     func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool {
         // Override point for customization after application launch.
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: "userDidLogout", name: userDidLogoutNotification, object: nil)
+        
+        if User.currentUser != nil {
+            // go log in
+            println("current user: \(User.currentUser?.name)")
+            var vc = storyboard.instantiateViewControllerWithIdentifier("TweetsViewController") as! UIViewController
+            window?.rootViewController = vc
+        }
         return true
+    }
+    
+    func userDidLogout() {
+        var vc = storyboard.instantiateInitialViewController() as! UIViewController
+        window?.rootViewController = vc
     }
 
     func applicationWillResignActive(application: UIApplication) {
@@ -43,32 +56,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // at this point only twitter accesses this func
     func application(application: UIApplication, openURL url: NSURL, sourceApplication: String?, annotation: AnyObject?) -> Bool {
-        TwitterClient.sharedInstance.fetchAccessTokenWithPath("oauth/access_token",
-            method: "POST",
-            requestToken: BDBOAuth1Credential(queryString: url.query),
-            success: {(accessToken: BDBOAuth1Credential!) -> Void in
-                println("got access token")
-                TwitterClient.sharedInstance.requestSerializer.saveAccessToken(accessToken)
-                TwitterClient.sharedInstance.GET("1.1/account/verify_credentials.json",
-                    parameters: nil,
-                    success: {(operation: AFHTTPRequestOperation!, response: AnyObject!) -> Void in
-                        println("user: \(response)")
-                    },
-                    failure: {(operation: AFHTTPRequestOperation!, error: NSError!) -> Void in
-                        println("failed to get user")
-                    })
-                TwitterClient.sharedInstance.GET("1.1/statuses/home_timeline.json",
-                    parameters: nil,
-                    success: {(operation: AFHTTPRequestOperation!, response: AnyObject!) -> Void in
-                        println("home timeline: \(response)")
-                    },
-                    failure: {(operation: AFHTTPRequestOperation!, error: NSError!) -> Void in
-                        println("failed to get home timeline")
-                })
-            }) {(error: NSError!) -> Void in
-                println("error getting access token")
-        }
-        return true
+        TwitterClient.sharedInstance.openURL(url)
+                return true
     }
 
 }
